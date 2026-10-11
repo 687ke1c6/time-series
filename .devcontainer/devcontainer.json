@@ -1,0 +1,25 @@
+{
+  "name": "time-series",
+  "build": { "dockerfile": "Dockerfile" },
+  "remoteUser": "vscode",
+  "forwardPorts": [3000, 5173],
+  "portsAttributes": {
+    "3000": { "label": "axum" },
+    "5173": { "label": "vite" }
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml",
+        "bradlc.vscode-tailwindcss",
+        "oven.bun-vscode",
+        "esbenp.prettier-vscode"
+      ],
+      "settings": {
+        "rust-analyzer.check.command": "clippy"
+      }
+    }
+  }
+}

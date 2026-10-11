@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#155dfc" />
+    <title>time-series</title>
+  </head>
+  <body>
+    <!-- Static placeholder shown until the app's JS loads; index.tsx clears it. -->
+    <div id="root">
+      <div class="mx-auto max-w-md space-y-6 px-4 py-6 sm:max-w-2xl sm:py-10" role="status">
+        <span class="sr-only">Loading…</span>
+        <div class="h-9 w-40 animate-pulse rounded-md bg-muted"></div>
+        <div class="h-28 animate-pulse rounded-xl bg-muted"></div>
+        <div class="h-28 animate-pulse rounded-xl bg-muted"></div>
+      </div>
+    </div>
+    <script type="module" src="/src/index.tsx"></script>
+  </body>
+</html>
