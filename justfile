@@ -13,6 +13,11 @@ dev:
 # Build the frontend bundle
 build:
     cd web && bun run build
+    cargo build --release
+    rm -rf dist
+    mkdir -p dist/web
+    cp target/release/time-series dist/
+    cp -r web/dist dist/web/dist
 
 # Build the frontend, then run the server in release mode
 run: build

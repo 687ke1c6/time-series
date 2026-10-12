@@ -1,0 +1,10 @@
+.git
+.devcontainer
+target
+dist
+data
+web/node_modules
+web/dist
+.env
+.env.*
+*.log

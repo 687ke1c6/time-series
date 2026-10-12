@@ -5,7 +5,7 @@ import {
   notFound,
 } from "@tanstack/solid-router";
 
-import { fetchKinds, fetchSamples, fetchUnits } from "@/api";
+import { BASE_URL, fetchKinds, fetchSamples, fetchUnits } from "@/api";
 import App, { ErrorPage, KindNotFound, NotFound } from "@/App";
 import {
   FormSkeleton,
@@ -120,6 +120,7 @@ export const router = createRouter({
     kindSettingsRoute,
     newSampleRoute,
   ]),
+  basepath: BASE_URL,
   defaultPreload: "intent",
   // Fast loads swap pages without a flash; slower ones show the skeleton
   // after 150ms and keep it at least 300ms so it doesn't flicker.

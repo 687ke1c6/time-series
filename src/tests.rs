@@ -1,5 +1,7 @@
 //! API tests. Each `#[sqlx::test]` gets its own fresh, migrated SQLite database.
 
+use std::sync::atomic::{AtomicUsize, Ordering};
+
 use axum::{
     body::{Body, to_bytes},
     http::{Method, Request, StatusCode, header},
@@ -9,7 +11,7 @@ use serde_json::{Value, json};
 use sqlx::SqlitePool;
 use tower::ServiceExt;
 
-use crate::api_routes;
+use crate::{api_routes, app, base_url};
 
 /// Sends one request through the API router and returns status + JSON body.
 async fn call(
@@ -478,4 +480,72 @@ async fn malformed_requests_keep_their_status(pool: SqlitePool) {
     let (status, body) = send(&pool, bad_json).await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
     assert!(body["error"].is_string());
+}
+
+#[test]
+fn base_url_is_normalized() {
+    assert_eq!(base_url::normalize(""), "/");
+    assert_eq!(base_url::normalize("/"), "/");
+    assert_eq!(base_url::normalize("ts"), "/ts/");
+    assert_eq!(base_url::normalize("/apps/ts"), "/apps/ts/");
+    assert_eq!(base_url::normalize("/apps/ts/"), "/apps/ts/");
+}
+
+/// Sends a GET through the full app with a stub bundle, returning status + body text.
+async fn get_app(pool: &SqlitePool, base_url: &str, uri: &str) -> (StatusCode, String) {
+    // A directory per call, since tests run in parallel.
+    static NEXT: AtomicUsize = AtomicUsize::new(0);
+    let web_dist = std::env::temp_dir().join(format!(
+        "time-series-dist-{}-{}",
+        std::process::id(),
+        NEXT.fetch_add(1, Ordering::Relaxed)
+    ));
+    std::fs::create_dir_all(web_dist.join("assets")).unwrap();
+    std::fs::write(web_dist.join("index.html"), "<html><head></head></html>").unwrap();
+    std::fs::write(web_dist.join("assets/app.js"), "// app").unwrap();
+
+    let req = Request::builder().uri(uri).body(Body::empty()).unwrap();
+    let res = app(pool.clone(), &web_dist, base_url)
+        .oneshot(req)
+        .await
+        .unwrap();
+    let status = res.status();
+    let bytes = to_bytes(res.into_body(), usize::MAX).await.unwrap();
+    (status, String::from_utf8(bytes.to_vec()).unwrap())
+}
+
+#[sqlx::test]
+async fn serves_under_base_url(pool: SqlitePool) {
+    let index = r#"<html><head>
+    <base href="/apps/ts/" /></head></html>"#;
+    for uri in ["/apps/ts", "/apps/ts/", "/apps/ts/kinds/1"] {
+        assert_eq!(
+            get_app(&pool, "/apps/ts/", uri).await,
+            (StatusCode::OK, index.into()),
+            "{uri}"
+        );
+    }
+    assert_eq!(
+        get_app(&pool, "/apps/ts/", "/apps/ts/assets/app.js")
+            .await
+            .1,
+        "// app"
+    );
+    let (status, body) = get_app(&pool, "/apps/ts/", "/apps/ts/api/health").await;
+    assert_eq!(
+        (status, body.as_str()),
+        (StatusCode::OK, r#"{"status":"ok"}"#)
+    );
+    assert_eq!(
+        get_app(&pool, "/apps/ts/", "/api/health").await.0,
+        StatusCode::NOT_FOUND
+    );
+}
+
+#[sqlx::test]
+async fn serves_at_root_by_default(pool: SqlitePool) {
+    let (status, body) = get_app(&pool, "/", "/kinds/1").await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(body.contains(r#"<base href="/" />"#), "{body}");
+    assert_eq!(get_app(&pool, "/", "/api/health").await.0, StatusCode::OK);
 }

@@ -24,7 +24,7 @@ const date = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
 /**
  * Line chart of one series over time, sized to its container. Hovering shows
  * a crosshair and a tooltip for the nearest sample; `highlight` rings one point.
- * A dashed rule marks today, and `forecast` draws a dashed projection to zero.
+ * `forecast` draws a dashed projection to zero, with a dashed rule marking today.
  */
 export default function TimeSeriesChart(props: {
   data: Point[];
@@ -67,22 +67,22 @@ export default function TimeSeriesChart(props: {
         tickFormat: (d) => compact.format(d),
       },
       marks: [
-        Plot.ruleX([today], {
-          stroke: "currentColor",
-          strokeOpacity: 0.6,
-          strokeDasharray: "2,3",
-        }),
-        Plot.text([today], {
-          x: (d: Date) => d,
-          text: () => "Today",
-          frameAnchor: "top",
-          textAnchor: "end",
-          dx: -4,
-          dy: 4,
-          fill: "currentColor",
-        }),
         forecast
           ? [
+              Plot.ruleX([today], {
+                stroke: "currentColor",
+                strokeOpacity: 0.6,
+                strokeDasharray: "2,3",
+              }),
+              Plot.text([today], {
+                x: (d: Date) => d,
+                text: () => "Today",
+                frameAnchor: "top",
+                textAnchor: "end",
+                dx: -4,
+                dy: 4,
+                fill: "currentColor",
+              }),
               Plot.lineY([forecast.from, forecast.to], {
                 ...xy,
                 stroke: SERIES,

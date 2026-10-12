@@ -19,10 +19,17 @@ export type Sample = {
 
 export class ApiError extends Error {}
 
+/**
+ * The path the app is served under, with a trailing slash. The server injects
+ * `<base href="$BASE_URL">` into index.html; without it (Vite dev) it's "/".
+ */
+export const BASE_URL =
+  document.querySelector("base")?.getAttribute("href") ?? "/";
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(path, init);
+    res = await fetch(BASE_URL + path.replace(/^\//, ""), init);
   } catch {
     throw new ApiError(
       "Can't reach the server. Check your connection and try again.",
