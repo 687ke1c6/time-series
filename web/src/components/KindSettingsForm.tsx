@@ -1,8 +1,9 @@
-import { createSignal, For, type JSX, Show } from "solid-js";
+import { createSignal, type JSX, Show } from "solid-js";
 
 import { ApiError, type Kind, type KindSettings, type UnitGroup } from "@/api";
 import { Button } from "@/components/ui/button";
-import { FieldError, Input, Label, NativeSelect } from "@/components/ui/input";
+import { FieldError, Input, Label } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 
 /**
@@ -73,29 +74,26 @@ export default function KindSettingsForm(props: {
       </div>
 
       <div class="space-y-2">
-        <Label for="kind-unit">Unit</Label>
-        <NativeSelect
+        <Label id="kind-unit-label" for="kind-unit">
+          Unit
+        </Label>
+        <Select
           id="kind-unit"
+          aria-labelledby="kind-unit-label"
           value={unit()}
-          onChange={(e) => setUnit(e.currentTarget.value)}
-        >
-          <option value="">No unit</option>
-          <For each={props.units}>
-            {(group) => (
-              <optgroup label={group.group}>
-                <For each={group.units}>
-                  {(u) => (
-                    <option value={u.symbol}>
-                      {u.symbol === u.label
-                        ? u.symbol
-                        : `${u.symbol} — ${u.label}`}
-                    </option>
-                  )}
-                </For>
-              </optgroup>
-            )}
-          </For>
-        </NativeSelect>
+          onChange={setUnit}
+          options={[
+            { value: "", label: "No unit" },
+            ...props.units.map((group) => ({
+              label: group.group,
+              options: group.units.map((u) => ({
+                value: u.symbol,
+                label:
+                  u.symbol === u.label ? u.symbol : `${u.symbol} — ${u.label}`,
+              })),
+            })),
+          ]}
+        />
         <Show when={unitChanged()}>
           <p class="text-sm text-muted-foreground">
             Existing samples keep their numbers; they aren't converted to the

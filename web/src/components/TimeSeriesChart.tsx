@@ -99,7 +99,7 @@ export default function TimeSeriesChart(props: {
               }),
               Plot.text([forecast.to], {
                 ...xy,
-                text: (d: Point) => `0 · ${date.format(d.date)}`,
+                text: (d: Point) => `${date.format(d.date)}`,
                 textAnchor: "end",
                 dy: -12,
                 fill: "currentColor",

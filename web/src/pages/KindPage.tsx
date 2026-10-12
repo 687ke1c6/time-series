@@ -15,8 +15,16 @@ import { kindLabel } from "@/api";
 import { HomeLink } from "@/App";
 import TimeSeriesChart, { type Point } from "@/components/TimeSeriesChart";
 import { buttonVariants } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { forecastToZero } from "@/lib/forecast";
+import {
+  type Average,
+  type ForecastOptions,
+  forecastToZero,
+  loadForecastOptions,
+  saveForecastOptions,
+  WINDOWS,
+} from "@/lib/forecast";
 import { cn } from "@/lib/utils";
 
 const dateTime = new Intl.DateTimeFormat(undefined, {
@@ -53,8 +61,20 @@ export default function KindPage() {
   // Only types with the forecast setting get the switch; it starts off.
   const [showForecast, setShowForecast] = createSignal(false);
   createEffect(on(kindId, () => setShowForecast(false), { defer: true }));
+  // How the trend is fitted, remembered per type in localStorage.
+  const [options, setOptions] = createSignal(loadForecastOptions(kindId()));
+  createEffect(
+    on(kindId, (id) => setOptions(loadForecastOptions(id)), { defer: true }),
+  );
+  const updateOptions = (patch: Partial<ForecastOptions>) => {
+    const next = { ...options(), ...patch };
+    setOptions(next);
+    saveForecastOptions(kindId(), next);
+  };
   const forecast = createMemo(() =>
-    kind().forecast && showForecast() ? forecastToZero(points()) : null,
+    kind().forecast && showForecast()
+      ? forecastToZero(points(), options())
+      : null,
   );
   const unit = () => (kind().unit ? ` ${kind().unit}` : "");
 
@@ -72,39 +92,30 @@ export default function KindPage() {
             )}
           </Show>
         </h1>
-        {/* A native <select> stretched invisibly over the icon, so a tap
-                    opens the OS picker while only the icon shows. */}
-        <div
+        <Select<number | "new">
           title="Switch type"
-          class={cn(
+          aria-label="Switch type"
+          trigger={<Gauge class="size-5" aria-hidden="true" />}
+          triggerClass={cn(
             buttonVariants({ variant: "outline", size: "icon" }),
-            "relative shrink-0 focus-within:ring-2 focus-within:ring-ring",
+            "shrink-0",
           )}
-        >
-          <Gauge class="size-5" aria-hidden="true" />
-          <select
-            aria-label="Switch type"
-            class="absolute inset-0 cursor-pointer text-base opacity-0"
-            value={kind().id}
-            onChange={(e) => {
-              const value = e.currentTarget.value;
-              if (value === "new") {
-                e.currentTarget.value = String(kind().id);
-                void navigate({ to: "/kinds/new" });
-              } else {
-                void navigate({
-                  to: "/kinds/$kindId",
-                  params: { kindId: Number(value) },
-                });
-              }
-            }}
-          >
-            <For each={kinds()}>
-              {(k) => <option value={k.id}>{kindLabel(k)}</option>}
-            </For>
-            <option value="new">+ New type…</option>
-          </select>
-        </div>
+          value={kind().id}
+          onChange={(value) => {
+            if (value === "new") {
+              void navigate({ to: "/kinds/new" });
+            } else if (value !== kind().id) {
+              void navigate({
+                to: "/kinds/$kindId",
+                params: { kindId: value },
+              });
+            }
+          }}
+          options={[
+            ...kinds().map((k) => ({ value: k.id, label: kindLabel(k) })),
+            { value: "new" as const, label: "+ New type…" },
+          ]}
+        />
         <Link
           to="/kinds/$kindId/settings"
           params={{ kindId: kind().id }}
@@ -133,7 +144,29 @@ export default function KindPage() {
       <Show when={points().length > 0}>
         <section aria-label={`${kind().name} chart`} class="space-y-2">
           <Show when={kind().forecast}>
-            <div class="flex items-center justify-end gap-2">
+            <div class="flex flex-wrap items-center justify-end gap-2">
+              <Show when={showForecast()}>
+                <Select
+                  aria-label="Samples the forecast is based on"
+                  class="h-9 w-auto"
+                  value={options().window}
+                  onChange={(window) => updateOptions({ window })}
+                  options={WINDOWS.map((n) => ({
+                    value: n as number,
+                    label: `Last ${n}`,
+                  }))}
+                />
+                <Select<Average>
+                  aria-label="Averaging"
+                  class="h-9 w-auto"
+                  value={options().average}
+                  onChange={(average) => updateOptions({ average })}
+                  options={[
+                    { value: "sma", label: "SMA (equal weight)" },
+                    { value: "ema", label: "EMA (recent weigh more)" },
+                  ]}
+                />
+              </Show>
               <span
                 id="forecast-switch-label"
                 class="text-sm text-muted-foreground"
@@ -168,8 +201,8 @@ export default function KindPage() {
             {(f) => (
               <p class="text-sm text-muted-foreground">
                 At {rate.format(f().perDay)}
-                {unit()}/day (trend of the last {f().basedOn} samples), this
-                reaches 0 around{" "}
+                {unit()}/day ({options().average === "ema" ? "EMA" : "SMA"}{" "}
+                trend of the last {f().basedOn} samples), this reaches 0 around{" "}
                 <span class="font-medium text-foreground">
                   {date.format(f().to.date)}
                 </span>
