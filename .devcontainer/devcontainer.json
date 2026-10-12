@@ -7,7 +7,9 @@
     "3000": { "label": "axum" },
     "5173": { "label": "vite" }
   },
-  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "mounts": [
+    "source=${env:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"
+  ],
   "customizations": {
     "vscode": {
       "extensions": [

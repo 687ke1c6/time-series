@@ -7,6 +7,9 @@ RUN apt-get update \
 
 USER vscode
 
+# Task runner and file watcher used by the justfile (`just dev`)
+RUN cargo install --locked cargo-watch just
+
 # Bun 1.4.x (the Rust rewrite), pinned
 ARG BUN_VERSION=1.4.3
 RUN curl -fsSL https://bun.sh/install | bash -s "bun-v${BUN_VERSION}"
